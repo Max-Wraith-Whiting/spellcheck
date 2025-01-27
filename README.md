@@ -1,0 +1,2 @@
+# spellcheck
+CLI spell checker.
