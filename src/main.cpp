@@ -4,6 +4,7 @@
 #include <numeric>
 #include <algorithm>
 #include <queue>
+#include <fstream>
 
 namespace BK_Tree {
 
@@ -48,6 +49,32 @@ int levDistance(const std::string_view a, const std::string_view b)
         int lDistance {0};
         std::string m_value {};
         std::vector<Node*> m_children {};
+
+        void innerQuery(const std::string_view query, const int accuracy, std::vector<std::string_view>& output)
+        {
+            int d {levDistance(m_value, query)};
+
+            const int upperBound {d + accuracy};
+            const int lowerBound {d - accuracy};
+
+            for (Node* child : m_children) {
+
+                if (child->lDistance > lowerBound && child->lDistance < upperBound) {
+                    output.emplace_back(child->m_value);
+                    innerQuery(query, accuracy, output);
+                }
+            }
+        }
+
+        void destructorRecursive(Node* n)
+        {
+            if (n) {
+                for (Node* child : n->m_children)
+                    destructorRecursive(child);
+                delete n;
+            }
+        }
+
     public:
 
         Node() = delete;
@@ -56,22 +83,33 @@ int levDistance(const std::string_view a, const std::string_view b)
         {
         }
 
-        ~Node() = default;
+        ~Node() {
+            destructorRecursive(this);
+        }
 
         void addChild(std::string value) 
         {
             int distance {levDistance(m_value, value)};
 
             for (Node* child : m_children) {
-                if (distance == (*child).lDistance) {
-                    (*child).addChild(value);
+                if (distance == child->lDistance) {
+                    child->addChild(value);
                     return;
                 }
             }
 
             Node* newChild = new Node(value);
-            (*newChild).lDistance = levDistance(m_value, (*newChild).m_value);
+            newChild->lDistance = levDistance(m_value, newChild->m_value);
             m_children.emplace_back(newChild);
+        }
+
+        std::vector<std::string_view> query(std::string_view query, int accuracy)
+        {
+            std::vector<std::string_view> output {};
+            output.reserve(16);
+            innerQuery(query, accuracy, output);
+
+            return output;
         }
 
         void print()
@@ -86,8 +124,17 @@ int levDistance(const std::string_view a, const std::string_view b)
                     q.push(child);
             }
         }
-    };
     
+        void populate(const std::string& fileName)
+        {
+            std::ifstream infile(fileName);
+            std::string s {};
+            while (infile >> s) {
+                this->addChild(s);
+            }
+        }
+
+    };
 }
 
 /// @brief Calculates the Levenshtein distance between two strings.
@@ -147,16 +194,28 @@ void repl()
     }
 }
 
+void printVector(std::vector<std::string_view> v)
+{
+    std::cout << "< ";
+    for (std::string_view s : v) {
+        std::cout << s << ", ";
+    }
+    std::cout << ">\n";
+}
+
 int main()
 {
     // repl();
     // int d {levDistance("sittmg", "setting")};
     // std::cout << "diff = " << d << '\n';
 
-    BK_Tree::Node root {BK_Tree::Node("book")};
-    root.addChild("rook");
-    root.addChild("nooks");
-    root.addChild("boon");
+    BK_Tree::Node root {"book"};
+    root.populate("../docs/excerpt");
+    // root.addChild("rook");
+    // root.addChild("nooks");
+    // root.addChild("boon");
     root.print();
+
+    printVector(root.query("took", 0));
 
 }
