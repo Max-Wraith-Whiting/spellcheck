@@ -1,8 +1,6 @@
 #include <iostream>
 #include <ranges>
 #include <vector>
-#include <numeric>
-#include <algorithm>
 #include <queue>
 #include <fstream>
 
@@ -42,27 +40,23 @@ int levDistance(const std::string_view a, const std::string_view b)
     return v0.at(n - 1);
 }
 
-
-    
     class Node {
     private:
         int lDistance {0};
         std::string m_value {};
         std::vector<Node*> m_children {};
 
-        void innerQuery(const std::string_view query, const int accuracy, std::vector<std::string_view>& output)
+        void queryRecursive(std::vector<std::string_view>& output, std::string_view query, const int accuracy)
         {
-            int d {levDistance(m_value, query)};
-
-            const int upperBound {d + accuracy};
-            const int lowerBound {d - accuracy};
+            const int distance {levDistance(m_value, query)};
+            const int upperBound {distance + accuracy};
+            const int lowerBound {distance - accuracy};
+            if (distance <= accuracy)
+                output.push_back(m_value);
 
             for (Node* child : m_children) {
-
-                if (child->lDistance > lowerBound && child->lDistance < upperBound) {
-                    output.emplace_back(child->m_value);
-                    innerQuery(query, accuracy, output);
-                }
+                if (child->lDistance <= upperBound && child->lDistance >= lowerBound)
+                    child->queryRecursive(output, query, accuracy);
             }
         }
 
@@ -72,6 +66,15 @@ int levDistance(const std::string_view a, const std::string_view b)
         Node(std::string value) :
             m_value {value}
         {
+        }
+
+        Node(std::istream& stream)
+        {
+            stream >> m_value;
+
+            std::string s {};
+            while (stream >> s)
+                this->addChild(s);
         }
 
         ~Node() {
@@ -95,11 +98,12 @@ int levDistance(const std::string_view a, const std::string_view b)
             m_children.emplace_back(newChild);
         }
 
-        std::vector<std::string_view> query(std::string_view query, int accuracy)
+        std::vector<std::string_view> query(std::string_view query, const int accuracy)
         {
             std::vector<std::string_view> output {};
             output.reserve(16);
-            innerQuery(query, accuracy, output);
+
+            queryRecursive(output, query, accuracy);
 
             return output;
         }
@@ -117,16 +121,25 @@ int levDistance(const std::string_view a, const std::string_view b)
             }
         }
     
-        void populate(const std::string& fileName)
+        void populateFromStream(std::istream& stream)
         {
-            std::ifstream infile(fileName);
             std::string s {};
-            while (infile >> s) {
+            while (stream >> s) {
                 this->addChild(s);
             }
         }
 
     };
+}
+
+// DEBUG
+void printVector(std::vector<std::string_view> v)
+{
+    std::cout << "< ";
+    for (std::string_view s : v) {
+        std::cout << s << ", ";
+    }
+    std::cout << ">\n";
 }
 
 // Possibly remove this as it is unecessary.
@@ -144,32 +157,29 @@ std::string_view stripTailPunct(std::string_view s)
 
 void repl()
 {
+    std::ifstream file("./docs/excerpt.txt");
+    BK_Tree::Node spellchecker(file);
     std::string input {};
     std::cout << "~ ";
     while (std::cin >> input) {
         std::cout << "spellcheck: " << input << "\n~ ";
-        stripTailPunct(input);
+        std::vector<std::string_view> results {spellchecker.query(input, 1)};
+        printVector(results);
     }
 }
 
-// DEBUG
-void printVector(std::vector<std::string_view> v)
+void printFile() 
 {
-    std::cout << "< ";
-    for (std::string_view s : v) {
-        std::cout << s << ", ";
-    }
-    std::cout << ">\n";
+    std::ifstream f("./docs/excerpt.txt");
+
+    if (f.is_open()) 
+        std::cout << f.rdbuf();
+    else
+        std::cout << "File is not open?!";
+
 }
 
 int main()
 {
-    BK_Tree::Node root {"book"};
-    root.addChild("rook");
-    root.addChild("nooks");
-    root.addChild("boon");
-    root.print();
-
-    printVector(root.query("took", 0));
-
+    repl();
 }
