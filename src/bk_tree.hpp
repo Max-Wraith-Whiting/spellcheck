@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <stack>
 
 class BKTree {
 public:
@@ -30,11 +31,9 @@ public:
     void populateFromStream(std::istream &stream);
 
 private:
-    int lDistance{0};
+    int m_lDistance{0};
     std::string m_value{};
     std::vector<BKTree *> m_children{};
-
-    void queryRecursive(std::vector<std::string_view> &output, std::string_view query, const int accuracy);
 
     /// @brief Calculates the Levenshtein distance between two strings.
     /// Does not care about whether a or b is longer.

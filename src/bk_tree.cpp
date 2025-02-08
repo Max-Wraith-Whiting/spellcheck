@@ -20,7 +20,7 @@ void BKTree::addChild(std::string value)
     int distance{levDistance(m_value, value)};
 
     for (BKTree *child : m_children) {
-        if (distance == child->lDistance)
+        if (distance == child->m_lDistance)
         {
             child->addChild(value);
             return;
@@ -28,7 +28,7 @@ void BKTree::addChild(std::string value)
     }
 
     BKTree *newChild = new BKTree(value);
-    newChild->lDistance = levDistance(m_value, newChild->m_value);
+    newChild->m_lDistance = levDistance(m_value, newChild->m_value);
     m_children.emplace_back(newChild);
 }
 
@@ -37,8 +37,38 @@ std::vector<std::string_view> BKTree::query(std::string_view query, const int ac
     std::vector<std::string_view> output{};
     output.reserve(16);
 
-    queryRecursive(output, query, accuracy);
+    std::queue<BKTree*> q {{this}};
+    static int counter {0};
+    
+    while (!q.empty()) {
+        // Pull a node from the queue.
+        BKTree* node {q.front()};
+        q.pop();
+        counter++;
 
+        // If it is a known word, return just that.
+        if (node->m_value == query) {
+            output.clear();
+            output.push_back(node->m_value);
+            return output;
+        }
+
+        // Get the distance between the query and the m_value.
+        int distance {levDistance(node->m_value, query)};
+        int upperBound {distance + accuracy};
+        int lowerBound {distance - accuracy};
+
+        // If the current word is within range, add it to the output vector.
+        if (distance <= accuracy)
+            output.push_back(node->m_value);
+
+        // If the node has children that are within the range of accuracy.
+        for (BKTree* child : node->m_children)
+            if (child->m_lDistance <= upperBound && child->m_lDistance >= lowerBound)
+                q.push(child);
+    }
+    std::cout << counter << " nodes checked to find " << query << '\n';
+    counter = 0;
     return output;
 }
 
@@ -60,30 +90,6 @@ void BKTree::populateFromStream(std::istream &stream)
     std::string s{};
     while (stream >> s) {
         this->addChild(s);
-    }
-}
-
-void BKTree::queryRecursive(std::vector<std::string_view> &output, std::string_view query, const int accuracy)
-{
-    const int distance{levDistance(m_value, query)};
-    const int upperBound{distance + accuracy};
-    const int lowerBound{distance - accuracy};
-
-    // If an exact match is found, return only that.
-    if (distance == 0) {
-        output.clear();
-        output.push_back(m_value);
-        return;
-    }
-
-    // If a word within accuracy distance is found, append it to the output.
-    if (distance <= accuracy)
-        output.push_back(m_value);
-
-    // Query all the children of the current node that are within accuracy distance.
-    for (BKTree *child : m_children) {
-        if (child->lDistance <= upperBound && child->lDistance >= lowerBound)
-            child->queryRecursive(output, query, accuracy);
     }
 }
 
