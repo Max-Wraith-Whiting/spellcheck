@@ -34,4 +34,5 @@
 # Directories
 /build/*
 /docs/
+/dictionary/*
 /.vscode/
