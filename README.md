@@ -1,2 +1,2 @@
 # spellcheck
-CLI spell checker.
+CLI spell checker. (Don't use it. GNU ASpell rocks :P)
